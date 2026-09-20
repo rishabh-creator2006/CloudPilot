@@ -17,7 +17,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "CloudOps — Unified Cloud Control Plane",
-  description: "Unified resource management, scaling automation, and cost optimization platform",
+  description:
+    "Unified resource management, scaling automation, and cost optimization platform",
 };
 
 export default function RootLayout({
@@ -26,14 +27,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} dark h-full`}>
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} dark h-full`}
+    >
       <body className="min-h-full bg-[#090d16] text-slate-100 flex flex-col font-sans antialiased selection:bg-blue-500/30 selection:text-blue-200">
         <AuthProvider>
           <div className="flex flex-col min-h-screen">
             <Navbar />
-            <div className="flex flex-1 overflow-hidden">
+
+            <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
               <Sidebar />
-              <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+
+              <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
                 {children}
               </main>
             </div>
