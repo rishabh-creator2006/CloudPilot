@@ -1,132 +1,183 @@
-const API_BASE_URL = typeof window !== 'undefined' ? '/api' : 'http://127.0.0.1:8000/api';
+export type UserRole = 'ADMIN' | 'DEVELOPER' | 'VIEWER';
 
-function getAuthHeaders(): HeadersInit {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  permissions: string[];
+}
+
+export interface DashboardSummary {
+  health: {
+    score: number;
+    state: string;
+    warningCount?: number;
+    degradedCount: number;
   };
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('cloudops_token');
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-  }
-  return headers;
+
+  resources: {
+    total: number;
+    running: number;
+    warning?: number;
+    critical?: number;
+  };
+
+  cost: {
+    currency?: string;
+    currencySymbol?: string;
+    today?: number;
+    month: number;
+    budget: number;
+    projected?: number;
+    utilizationPercent: number;
+  };
+
+  traffic?: {
+    current: number;
+    changePercent: number;
+  };
+
+  latency: {
+    p95: number;
+  };
+
+  cpu: {
+    current: number;
+  };
+
+  recommendationsCount?: number;
+  isSimulationSpikeActive: boolean;
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const url = `${API_BASE_URL}${path}`;
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      ...getAuthHeaders(),
-      ...(options.headers || {}),
-    },
-  });
-
-  if (!response.ok) {
-    let errMsg = `Request failed: ${response.status} ${response.statusText}`;
-    try {
-      const errData = await response.json();
-      if (errData.detail) {
-        errMsg = typeof errData.detail === 'string' ? errData.detail : JSON.stringify(errData.detail);
-      }
-    } catch {
-      // ignore
-    }
-    throw new Error(errMsg);
-  }
-
-  return response.json();
+export interface MetricDataPoint {
+  timestamp: string;
+  cpu: number;
+  memory: number;
+  latency: number;
+  traffic: number;
+  errorRate: number;
+  instances: number;
 }
 
-export const api = {
-  // Auth
-  login: (email: string, password: string) =>
-    request<{ access_token: string; token_type: string; user: any }>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    }),
+export interface CloudResource {
+  id: string;
+  name: string;
+  type: string;
 
-  getMe: () => request<any>('/auth/me'),
+  provider?: string;
+  providerResourceId: string;
+  service?: string;
+  region?: string;
 
-  // Dashboard
-  getDashboardSummary: () => request<any>('/dashboard/summary'),
+  capacity: number;
+  minCapacity: number;
+  maxCapacity: number;
 
-  // Resources
-  getResources: (params?: { provider?: string; type?: string; status?: string }) => {
-    const query = new URLSearchParams();
-    if (params?.provider) query.set('provider', params.provider);
-    if (params?.type) query.set('type', params.type);
-    if (params?.status) query.set('status', params.status);
-    const qs = query.toString() ? `?${query.toString()}` : '';
-    return request<any[]>(`/resources${qs}`);
-  },
+  currentCpu: number;
+  currentLatency: number;
+  errorRate: number;
 
-  getResource: (id: string) => request<any>(`/resources/${id}`),
+  monthlyCost: number;
 
-  getResourceMetrics: (id: string, range: string = '1h') =>
-    request<any[]>(`/resources/${id}/metrics?range=${range}`),
+  health: string;
+  healthScore: number;
+  healthReasons: string[];
 
-  getServiceHealth: (id: string) => request<any>(`/services/${id}/health`),
+  status?: string;
+  currentTraffic?: number;
+}
 
-  // Costs
-  getCosts: () => request<any>('/costs'),
+export interface Recommendation {
+  id: string;
+  type?: string;
+  resourceId?: string;
+  resource: string;
 
-  // Recommendations
-  getRecommendations: (statusFilter?: string) => {
-    const qs = statusFilter ? `?status_filter=${statusFilter}` : '';
-    return request<any[]>(`/recommendations${qs}`);
-  },
+  currentCapacity: number;
+  proposedCapacity: number;
 
-  approveRecommendation: (id: string) =>
-    request<any>(`/recommendations/${id}/approve`, {
-      method: 'POST',
-    }),
+  reasons: string[];
 
-  rejectRecommendation: (id: string) =>
-    request<any>(`/recommendations/${id}/reject`, {
-      method: 'POST',
-    }),
+  cost: {
+    currency?: string;
+    currencySymbol: string;
+    currentMonthly: number;
+    proposedMonthly: number;
+    difference: number;
+  };
 
-  // Policies
-  getPolicies: () => request<any[]>('/policies'),
+  checks?: {
+    policy: boolean | string;
+    budget: boolean | string;
+    permission: boolean | string;
+    safety: boolean | string;
+  };
 
-  updatePolicy: (id: string, payload: any) =>
-    request<any>(`/policies/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(payload),
-    }),
+  requiresApproval?: boolean;
+  status: string;
+  createdAt?: string;
+}
 
-  // Budgets
-  getBudgets: () => request<any[]>('/budgets'),
+export interface AuditLogItem {
+  id: string;
+  timestamp: string;
+  created_at?: string;
 
-  updateBudget: (id: string, payload: any) =>
-    request<any>(`/budgets/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(payload),
-    }),
+  user_name: string;
+  action: string;
 
-  // Audit Logs
-  getAuditLogs: (limit: number = 50) => request<any[]>(`/audit-logs?limit=${limit}`),
+  resource_name?: string;
 
-  // Cloud Accounts
-  getCloudAccounts: () => request<any[]>('/cloud/accounts'),
+  old_state?: string;
+  new_state?: string;
 
-  // Demo Simulation Controls
-  triggerTrafficSpike: () =>
-    request<any>('/simulation/traffic-spike', {
-      method: 'POST',
-    }),
+  result: string;
+  details?: string;
+}
 
-  resetSimulation: () =>
-    request<any>('/simulation/reset', {
-      method: 'POST',
-    }),
+export interface Budget {
+  id: string;
+  name?: string;
 
-  // Metrics Ingestion
-  ingestMetrics: (data: { service: string; cpu?: number; latency_p95?: number; requests?: number; error_rate?: number }) =>
-    request<any>('/metrics', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-};
+  current_spend: number;
+  monthly_limit: number;
+  warning_threshold: number;
+
+  amount?: number;
+  spent?: number;
+  currency?: string;
+  period?: string;
+  status?: string;
+}
+
+export interface CloudAccount {
+  id: string;
+  name: string;
+  provider: string;
+
+  accountId?: string;
+  account_id?: string;
+
+  region?: string;
+  status?: string;
+
+  access_token?: string;
+}
+
+export interface Policy {
+  id: string;
+  name: string;
+
+  description?: string;
+  status?: string;
+  enabled?: boolean;
+  severity?: string;
+
+  min_instances: number;
+  max_instances: number;
+  max_scale_delta: number;
+
+  allowed_regions: string | string[];
+  require_approval: boolean;
+}
