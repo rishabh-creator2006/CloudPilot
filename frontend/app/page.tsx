@@ -1,5 +1,5 @@
 'use client';
-
+import { BackendStatus } from '../components/layout/BackendStatus';
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -219,7 +219,8 @@ export default function DashboardPage() {
           />
         </section>
       )}
-
+      {/* Backend Status */}
+<BackendStatus />
       {/* Telemetry Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <MetricChart
