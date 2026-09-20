@@ -1,4 +1,5 @@
-const API_BASE_URL = typeof window !== 'undefined' ? '/api' : 'http://127.0.0.1:8000/api';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || '/api';
 
 function getAuthHeaders(): HeadersInit {
   const headers: Record<string, string> = {
